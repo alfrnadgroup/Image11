@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Animal Classifier</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 40px;
+    }
+    #loading {
+      display: none;
+      color: green;
+    }
+  </style>
+  <script>
+    function showLoading() {
+      document.getElementById('loading').style.display = 'block';
+    }
+  </script>
+</head>
+<body>
+  <h1>Animal Classifier</h1>
+  <p><em>Note: The first request may take 30–50 seconds if the server is asleep.</em></p>
+
+  <form method="post" enctype="multipart/form-data" onsubmit="showLoading()">
+    <input type="file" name="file" required>
+    <button type="submit">Predict</button>
+  </form>
+
+  <p id="loading">Processing image, please wait...</p>
+
+  {% if prediction %}
+    <h2>{{ prediction }}</h2>
+  {% endif %}
+</body>
+</html>
