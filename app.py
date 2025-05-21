@@ -6,45 +6,52 @@ import os
 
 app = Flask(__name__)
 
-# Load model
+# Load the trained model once when the app starts
 model = tf.keras.models.load_model("model/animal_model.h5")
+print("? Model loaded successfully")
+print("Model input shape:", model.input_shape)
 
-# Update based on your training labels
-class_labels = ['animal', 'bird', 'tree']
+# Adjust class labels to match your model's output
+class_labels = ['animal', 'bird', 'tree']  # Update as needed
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     prediction = None
+    error = None
+
     if request.method == "POST":
         if "file" not in request.files:
-            prediction = "No file part"
+            error = "No file part"
         else:
             file = request.files["file"]
             if file.filename == "":
-                prediction = "No selected file"
+                error = "No selected file"
             else:
-                # Save uploaded file
-                os.makedirs("uploads", exist_ok=True)
-                filepath = os.path.join("uploads", file.filename)
-                file.save(filepath)
-
                 try:
-                    # Preprocess image — adjust target size & channels to match your model
-                    img = image.load_img(filepath, target_size=(28, 28), color_mode="grayscale")
-                    img_array = image.img_to_array(img) / 255.0
-                    img_array = np.expand_dims(img_array, axis=0)  # shape: (1, 28, 28, 1)
+                    # Save uploaded file temporarily
+                    os.makedirs("uploads", exist_ok=True)
+                    img_path = os.path.join("uploads", file.filename)
+                    file.save(img_path)
+
+                    # Load and preprocess the image (convert to grayscale and resize to 28x28)
+                    img = image.load_img(img_path, color_mode='grayscale', target_size=(28, 28))
+                    img_array = image.img_to_array(img) / 255.0  # Normalize
+                    img_array = np.squeeze(img_array)  # Shape: (28, 28)
+                    img_array = np.expand_dims(img_array, axis=0)  # Shape: (1, 28, 28)
 
                     # Predict
                     preds = model.predict(img_array)
                     predicted_index = np.argmax(preds, axis=1)[0]
                     predicted_label = class_labels[predicted_index]
-                    prediction = f"Prediction: {predicted_label}"
-                except Exception as e:
-                    prediction = f"Error during prediction: {str(e)}"
-                finally:
-                    os.remove(filepath)
 
-    return render_template("index.html", prediction=prediction)
+                    prediction = f"Prediction: {predicted_label}"
+
+                    # Optionally delete the uploaded file
+                    os.remove(img_path)
+                except Exception as e:
+                    error = f"Internal error during prediction. {str(e)}"
+
+    return render_template("index.html", prediction=prediction, error=error)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host='0.0.0.0', port=5000)
